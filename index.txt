@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小鱼儿成长计划 v1.5.6 - 最终版</title>
+    <style>
+        :root{--bg-color:#e0f7fa;--panel-bg:rgba(255,255,255,0.9);--primary-color:#00acc1;--secondary-color:#ff80ab;--accent-color:#ffc107;--text-color:#37474f;--border-color:#b2ebf2;--completed-bg:#e0f7fa}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes bounce{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-15px)}60%{transform:translateY(-8px)}}
+        body{font-family:'Helvetica Neue','Hiragino Sans GB','WenQuanYi Micro Hei','Microsoft YaHei',sans-serif;background-color:var(--bg-color);background-image:linear-gradient(135deg,#e0f7fa 0%,#b2ebf2 100%);color:var(--text-color);margin:0;padding:20px;display:flex;justify-content:center}
+        .container{width:100%;max-width:1400px;backdrop-filter:blur(10px);border-radius:20px;box-shadow:0 8px 32px 0 rgba(0,172,193,.15);padding:25px;display:grid;grid-template-columns:2fr 1fr;gap:25px;grid-template-areas:"header pet" "main sidebar";animation:fadeIn .5s ease-in-out}
+        @media (max-width:1200px){.container{grid-template-columns:1fr;grid-template-areas:"header" "pet" "main" "sidebar"}}
+        .header{grid-area:header}#pet-partner{grid-area:pet}.main-content{grid-area:main;display:flex;flex-direction:column;gap:25px}.sidebar{grid-area:sidebar;display:flex;flex-direction:column;gap:25px}
+        .panel{background-color:var(--panel-bg);padding:20px;border-radius:15px;border:1px solid var(--border-color);transition:transform .3s,box-shadow .3s;animation:popIn .5s ease-out forwards}
+        .panel h2,.panel h3{margin-top:0;color:var(--primary-color);border-bottom:2px solid var(--primary-color);padding-bottom:10px;display:flex;align-items:center;justify-content:space-between;font-size:1.3em}
+        .panel h3{font-size:1.1em;border-bottom:1px solid var(--border-color);margin-bottom:10px;}.panel h2 .icon{margin-right:10px;font-size:1.4em}
+        h1{color:var(--primary-color);font-size:2.5em;margin:0}#welcomeMessage{color:var(--secondary-color);font-size:1.2em;font-weight:700}
+        #pet-partner{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+        .pet-container{cursor:pointer;text-align:center}
+        .pet-image{width:150px;height:150px;background-size:contain;background-repeat:no-repeat;background-position:center;transition:transform .3s,background-image .5s ease-in-out;image-rendering:-webkit-optimize-contrast}
+        .pet-image:hover{transform:scale(1.1)}
+        .pet-actions{display:flex;gap:10px;margin-top:10px}
+        .pet-speech-bubble{position:absolute;bottom:180px;background:#fff;padding:10px 15px;border-radius:10px;border:2px solid var(--primary-color);box-shadow:0 2px 5px rgba(0,0,0,.1);font-size:.9em;opacity:0;visibility:hidden;transition:all .3s;transform:translateY(10px);z-index:10;width:max-content;max-width:200px}
+        .pet-speech-bubble.show{opacity:1;visibility:visible;transform:translateY(0)}
+        .pet-speech-bubble:after{content:'';position:absolute;bottom:-10px;left:30px;border-width:10px 10px 0;border-style:solid;border-color:#fff transparent}
+        input,select,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:10px;box-sizing:border-box}
+        button{background-image:linear-gradient(45deg,var(--secondary-color) 0%,var(--primary-color) 100%);color:#fff;border:none;padding:10px 15px;border-radius:8px;cursor:pointer;transition:all .3s;font-size:1em;font-weight:700;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+        button:hover{transform:scale(1.05);box-shadow:0 4px 10px rgba(0,0,0,.15)}
+        button:disabled{background-image:none;background-color:#ccc;cursor:not-allowed}
+        #btn-new-period{background-image:linear-gradient(45deg,var(--accent-color) 0%,#f57f17 100%)}
+        .input-group{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;align-items:center}.input-group>*{flex:1 1 100px}.input-group button{flex-grow:.5}
+        ul{list-style:none;padding:0;max-height:220px;overflow-y:auto}
+        li{background-color:#fff;padding:10px 15px;border-left:5px solid;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;transition:all .3s}
+        li.completed{text-decoration:line-through;color:#999;background-color:var(--completed-bg)}
+        .task-actions{display:flex;gap:8px}.btn-small{padding:5px 8px;font-size:.8em}.btn-delete{background-image:linear-gradient(45deg,#ff8a80,#ff5252)}.btn-edit{background-image:linear-gradient(45deg,#81d4fa,#4fc3f7)}
+        .task-category,.task-schedule-tag{font-size:.8em;padding:2px 6px;border-radius:10px;color:#fff;margin-left:8px}
+        .cat-learning{background-color:#42a5f5}.cat-behavior{background-color:#ffa726}.cat-chores{background-color:#66bb6a}
+        .task-schedule-tag{background-color:#78909c}
+        .main-tasks-container{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+        @media (max-width:768px){.main-tasks-container{grid-template-columns:1fr}}
+        .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;text-align:center}.stat-item .stat-value{font-size:2em;color:var(--secondary-color);font-weight:700}.stat-item .stat-label{font-size:0.9em;color:var(--text-color);}
+        #history-section{margin-top:20px;padding-top:15px;border-top:1px solid var(--border-color)}
+        #xp-progress-bar{width:100%;height:10px;border-radius:5px;-webkit-appearance:none;appearance:none}
+        #xp-progress-bar::-webkit-progress-bar{background-color:#eee;border-radius:5px}#xp-progress-bar::-webkit-progress-value{background-color:var(--secondary-color);border-radius:5px;transition:width .5s ease-in-out}
+        #badges-container{margin-top:20px}
+        .badge-item{display:inline-flex;align-items:center;margin-right:10px;margin-bottom:10px;position:relative}
+        .badge{font-size:2em;cursor:pointer;filter:grayscale(1);opacity:.5;transition:all .3s}.badge.unlocked{filter:grayscale(0);opacity:1;transform:scale(1.1)}
+        .btn-delete-badge{position:absolute;top:-5px;right:-5px;background:red;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;justify-content:center;align-items:center;opacity:0;transition:opacity .3s}
+        .badge-item:hover .btn-delete-badge{opacity:1}
+        #diary-section,#agreement-section{margin-top:20px}#diaryList{max-height:100px}
+        #diaryList li{font-size:.9em;padding:8px;background:#f5f5f5;border-left:3px solid var(--accent-color)}
+        #agreement-text{width:100%;height:80px;background:#fffde7;border:1px dashed var(--primary-color)}
+        #badge-manager{margin-top:15px;padding-top:15px;border-top:1px solid var(--border-color)}#badge-manager .input-group{flex-direction:column;align-items:stretch}#badge-manager .input-group div{display:flex;gap:10px}
+        /* Modal Styles */
+        .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,0.5);animation:fadeIn .3s}
+        .modal-content{background-color:#fefefe;margin:10% auto;padding:20px;border:1px solid #888;width:80%;max-width:600px;border-radius:15px;box-shadow:0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19)}
+        .modal-header{padding-bottom:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
+        .modal-header h2{margin:0;color:var(--primary-color)}
+        .close-button{color:#aaa;font-size:28px;font-weight:bold;cursor:pointer}.close-button:hover,.close-button:focus{color:black;text-decoration:none}
+        .modal-body table{width:100%;border-collapse:collapse;margin-top:15px}
+        .modal-body th,.modal-body td{border:1px solid #ddd;padding:8px;text-align:left}
+        .modal-body th{background-color:var(--bg-color)}
+        .modal-body .form-group{margin-bottom:15px}.modal-body .form-group label{display:block;margin-bottom:5px;font-weight:bold}
+        .modal-footer{text-align:right;margin-top:20px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header"><h1>☁️ 小鱼儿成长计划 V1.5.6 ☁️</h1><p id="welcomeMessage"></p></header>
+        <div id="pet-partner" class="panel">
+            <div class="pet-container" onclick="petPet()">
+                <div id="pet-image-container" class="pet-image"></div>
+                <span>云宝 (点击抚摸, 消耗5积分)</span>
+            </div>
+            <div class="pet-actions"><button id="feedPetBtn" onclick="feedPet()">喂食 (消耗10积分)</button></div>
+            <div id="pet-speech-bubble" class="pet-speech-bubble"></div>
+        </div>
+        <main class="main-content">
+            <div class="panel">
+                <div class="main-tasks-container">
+                    <div>
+                        <h2><span class="icon">📋</span> 今日计划 <button class="btn-small" onclick="showReportModal()">📊 生成今日报告</button></h2>
+                        <ul id="todayTaskList"></ul>
+                    </div>
+                    <div>
+                        <h2><span class="icon">🗃️</span> 任务池</h2>
+                        <ul id="taskPoolList"></ul>
+                    </div>
+                </div>
+            </div>
+             <div class="panel">
+                <h3><span class="icon">⚡</span> 添加今日临时任务</h3>
+                 <div class="input-group">
+                    <input type="text" id="tempTaskInput" placeholder="一次性任务 (如: 帮妈妈买东西)">
+                    <input type="number" id="tempTaskPointsInput" min="1" placeholder="积分">
+                    <select id="tempTaskCategoryInput">
+                        <option value="learning">学习习惯</option>
+                        <option value="behavior">行为习惯</option>
+                        <option value="chores">家务劳动</option>
+                    </select>
+                    <button onclick="addTemporaryTask()">添加</button>
+                </div>
+            </div>
+            <div class="panel">
+                <h3><span class="icon">➕</span> 添加新任务到任务池</h3>
+                 <div class="input-group">
+                    <input type="text" id="taskInput" placeholder="任务名称">
+                    <input type="number" id="taskPointsInput" min="1" placeholder="积分">
+                    <select id="taskCategoryInput">
+                        <option value="learning">学习习惯</option>
+                        <option value="behavior">行为习惯</option>
+                        <option value="chores">家务劳动</option>
+                    </select>
+                     <select id="taskScheduleInput">
+                        <option value="everyday">每日</option>
+                        <option value="weekday">学习日</option>
+                        <option value="weekend">周末</option>
+                    </select>
+                    <button onclick="addTaskToPool()">添加</button>
+                </div>
+            </div>
+            <div class="panel">
+                <h2><span class="icon">🎁</span> 奖励兑换商店</h2>
+                <ul id="rewardList"></ul>
+                <h3>➕ 添加新奖励</h3>
+                <div class="input-group">
+                    <input type="text" id="rewardInput" placeholder="奖励名称 (如: 看30分钟动画)">
+                    <input type="number" id="rewardCostInput" min="1" placeholder="所需积分">
+                    <button onclick="addReward()">添加奖励</button>
+                </div>
+            </div>
+        </main>
+        <aside class="sidebar">
+            <div class="panel">
+                <h2><span class="icon">🏆</span> 我的成就</h2>
+                <div class="stats-grid">
+                    <div class="stat-item"><span id="pointsDisplay" class="stat-value">0</span><span class="stat-label">本期可用积分</span></div>
+                    <div class="stat-item"><span id="experienceDisplay" class="stat-value">0</span><span class="stat-label">总经验</span></div>
+                    <div class="stat-item"><span id="streakDisplay" class="stat-value">0</span><span class="stat-label">连续打卡</span></div>
+                    <div class="stat-item"><span id="levelDisplay" class="stat-value">1</span><span class="stat-label">等级</span></div>
+                </div>
+                <progress id="xp-progress-bar" value="0" max="100" style="width:100%;margin-top:10px"></progress>
+                <button id="btnCheckIn" style="width:100%; margin-top:15px;" onclick="checkIn()">每日签到</button>
+                <button id="btn-new-period" style="width:100%; margin-top:10px;" onclick="startNewPeriod()">🚀 开启新周期</button>
+                <div id="history-section">
+                    <h3>周期与历史成就</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span id="lastPeriodPointsDisplay" class="stat-value">0</span><span class="stat-label">上期结算积分</span></div>
+                        <div class="stat-item"><span id="totalPointsDisplay" class="stat-value">0</span><span class="stat-label">年度累计积分</span></div>
+                    </div>
+                </div>
+                <div id="badges-container">
+                    <h3>我的徽章</h3><div id="badgeList"></div>
+                    <div id="badge-manager">
+                        <h3>自定义徽章</h3>
+                        <div class="input-group">
+                            <div><input type="text" id="badgeIcon" placeholder="图标(Emoji)" style="flex:1"><input type="text" id="badgeName" placeholder="徽章名称" style="flex:3"></div>
+                            <div><select id="badgeConditionType" style="flex:2"><option value="streak">连续打卡天数</option><option value="totalTasks">本期完成任务</option><option value="totalXP">累计获得经验</option><option value="level">达到等级</option></select><input type="number" id="badgeConditionValue" placeholder="目标值" style="flex:1"></div>
+                            <div><input type="number" id="badgeReward" placeholder="奖励积分" style="flex:1"><button onclick="addBadge()" style="flex:1">添加徽章</button></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="diary-section"><h3><span class="icon">📓</span> 成长日记</h3><ul id="diaryList"></ul><div class="input-group"><input type="text" id="diaryInput" placeholder="记录今天特别的事..."><button onclick="addDiaryEntry(null, true)">记录</button></div></div>
+                <div id="agreement-section"><h3><span class="icon">🤝</span> 亲子约定</h3><textarea id="agreement-text" onchange="saveAgreement()"></textarea></div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modals -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content"><div class="modal-header"><h2>今日任务报告</h2><span class="close-button" onclick="closeReportModal()">&times;</span></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer"><button onclick="downloadReportCSV()">下载为CSV文件</button></div></div>
+    </div>
+    <div id="editTaskModal" class="modal">
+        <div class="modal-content"><div class="modal-header"><h2>编辑任务</h2><span class="close-button" onclick="closeEditModal()">&times;</span></div><div class="modal-body"><div class="form-group"><label for="editTaskInput">任务名称</label><input type="text" id="editTaskInput"></div><div class="form-group"><label for="editTaskPointsInput">积分</label><input type="number" id="editTaskPointsInput" min="1"></div><div class="form-group"><label for="editTaskCategoryInput">分类</label><select id="editTaskCategoryInput"><option value="learning">学习习惯</option><option value="behavior">行为习惯</option><option value="chores">家务劳动</option></select></div><div class="form-group"><label for="editTaskScheduleInput">重复周期</label><select id="editTaskScheduleInput"><option value="everyday">每日</option><option value="weekday">学习日</option><option value="weekend">周末</option></select></div></div><div class="modal-footer"><button onclick="saveTaskChanges()">保存更改</button></div></div>
+    </div>
+
+<script>
+// --- V1.5.6 CONFIG & DATA ---
+const STORAGE_KEY = 'fishGrowthPlan_data'; // PERMANENT storage key
+const OLD_STORAGE_KEYS = ['fishGrowthPlan_v1.5.5', 'fishGrowthPlan_v1.5.4', 'fishGrowthPlan_v1.5.3', 'fishGrowthPlan_v1.5.2', 'fishGrowthPlan_v1.5.1'];
+
+const PET_IMAGES = {
+    happy: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNzUgNzBDODUgNzAgOTUgNjAgOTUgNTBDOTUgNDAgODUgMzAgNzUgMzBDNjUgMzAgNTUgNDAgNTUgNTBDNTUgNjAgNjUgNzAgNzUgNzBaTTI1IDcwQzM1IDcwIDQ1IDYwIDQ1IDUwQzQ1IDQwIDM1IDMwIDI1IDMwQzE1IDMwIDUgNDAgNSA1MEM1IDYwIDE1IDcwIDI1IDcwWiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik05NSA1MEM5NSA3NS44OTkgNzUuODk5IDk1IDUwIDk1QzI0LjEwMSA5NSA1IDc1Ljg5OSA1IDUwQzUgMjQuMTAxIDI0LjEwMSA1IDUwIDVDNzUuODk5IDUgOTUgMjQuMTAxIDk1IDUwWiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjY1IiBjeT0iNDUiIHI9IjUiIGZpbGw9IiMzNzQ3NGYiLz48Y2lyY2xlIGN4PSIzNSIgY3k9IjQ1IiByPSI1IiBmaWxsPSIjMzc0NzRmIi8+PHBhdGggZD0iTTM1IDYwUTUwIDc1IDY1IDYwIiBzdHJva2U9IiMzNzQ3NGYiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+",
+    thinking: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNzUgNzBDODUgNzAgOTUgNjAgOTUgNTBDOTUgNDAgODUgMzAgNzUgMzBDNjUgMzAgNTUgNDAgNTUgNTBDNTUgNjAgNjUgNzAgNzUgNzBaTTI1IDcwQzM1IDcwIDQ1IDYwIDQ1IDUwQzQ1IDQwIDM1IDMwIDI1IDMwQzE1IDMwIDUgNDAgNSA1MEM1IDYwIDE1IDcwIDI1IDcwWiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik05NSA1MEM5NSA3NS44OTkgNzUuODk5IDk1IDUwIDk1QzI4LjEwMSA5NSA1IDc1Ljg5OSA1IDUwQzUgMjQuMTAxIDI0LjEwMSA1IDUwIDVDNzUuODk5IDUgOTUgMjQuMTAxIDk1IDUwWiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjY1IiBjeT0iNDUiIHI9IjUiIGZpbGw9IiMzNzQ3NGYiLz48Y2lyY2xlIGN4PSIzNSIgY3k9IjQ1IiByPSI1IiBmaWxsPSIjMzc0NzRmIi8+PHBhdGggZD0iTTM1IDY1SDY1IiBzdHJva2U9IiMzNzQ3NGYiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+",
+    bored: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNzUgNzBDODUgNzAgOTUgNjAgOTUgNTBDOTUgNDAgODUgMzAgNzUgMzBDNjUgMzAgNTUgNDAgNTUgNTBDNTUgNjAgNjUgNzAgNzUgNzBaTTI1IDcwQzM1IDcwIDQ1IDYwIDQ1IDUwQzQ1IDQwIDM1IDMwIDI1IDMwQzE1IDMwIDUgNDAgNSA1MEM1IDYwIDE1IDcwIDI1IDcwWiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik05NSA1MEM5NSA3NS44OTkgNzUuODk5IDk1IDUwIDk1QzI0LjEwMSA5NSA1IDc1Ljg5OSA1IDUwQzUgMjQuMTAxIDI0LjEwMSA1IDUwIDVDNzUuODk5IDUgOTUgMjQuMTAxIDk1IDUwWiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjY1IiBjeT0iNDUiIHI9IjUiIGZpbGw9IiMzNzQ3NGYiLz48Y2lyY2xlIGN4PSIzNSIgY3k9IjQ1IiByPSI1IiBmaWxsPSIjMzc0NzRmIi8+PHBhdGggZD0iTTM1IDcwUTUwIDU1IDY1IDcwIiBzdHJva2U9IiMzNzQ3NGYiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+"
+};
+const PET_QUOTES = ["今天我们挑战什么呀？", "完成任务，我才能充满能量哦！", "你真棒！继续加油！", "有点无聊啦，快来陪我玩~", "最喜欢被你抚摸了！"];
+const LEVELS=[{xp:0,title:"LV1: 初始之光"},{xp:100,title:"LV2: 萌芽新秀"},{xp:300,title:"LV3: 习惯能手"},{xp:600,title:"LV4: 计划大师"},{xp:1000,title:"LV5: 自律超人"}];
+let state={};
+let currentEditingTaskIndex = null;
+
+function getDefaultState(){
+    return {
+        taskPool: [], todayTasks: [], rewards: [], diary: [],
+        badges: [{id: 1, icon:"🔥",name:"连击达人",desc:"连续打卡7天！奖励50积分！",condition:{type:"streak",value:7},reward:50,isDefault:true}],
+        pet:{happiness:80,lastFed:0,lastPetted:0}, points: 100, experience: 0, streak: 0,
+        unlockedBadges: [], history: { lastPeriodPoints: 0, totalPoints: 0 },
+        agreement:"我们是最好的伙伴！要一起努力，一起成长！", lastCheckInDate: null, lastAutoUpdateDate: null
+    }
+}
+function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+function loadData(){
+    let loadedData=null;let rawData=localStorage.getItem(STORAGE_KEY);
+    if(rawData){loadedData=JSON.parse(rawData)}
+    else{for(const key of OLD_STORAGE_KEYS){rawData=localStorage.getItem(key);if(rawData){console.log(`Migrating data from old key: ${key}`);loadedData=JSON.parse(rawData);break}}}
+    state=loadedData?loadedData:getDefaultState();
+    if(loadedData){saveData()}
+
+    // --- **NEW AUTOMATIC DATA MIGRATION LOGIC** ---
+    let dataWasMigrated = false;
+    if (state.taskPool && Array.isArray(state.taskPool)) {
+        state.taskPool.forEach(task => {
+            if (task && typeof task.schedule === 'undefined') {
+                dataWasMigrated = true;
+                const text = task.text ? task.text.toLowerCase() : '';
+                if (text.includes('周末') || text.includes('周六') || text.includes('周日')) {
+                    task.schedule = 'weekend';
+                } else if (text.includes('学习日') || text.includes('工作日')) {
+                    task.schedule = 'weekday';
+                } else {
+                    task.schedule = 'everyday';
+                }
+            }
+        });
+    }
+    if(dataWasMigrated){
+        console.log("Successfully auto-assigned schedules to old tasks.");
+        saveData(); // Save the migrated data immediately
+    }
+    // --- END of MIGRATION LOGIC ---
+
+    if(!state.pet)state.pet=getDefaultState().pet;
+    if(!state.badges)state.badges=getDefaultState().badges;
+    if(!state.history)state.history=getDefaultState().history;
+    if(!state.rewards)state.rewards=[];
+    if(!state.lastAutoUpdateDate)state.lastAutoUpdateDate=null;
+}
+function renderAll(){renderTodayTasks();renderTaskPool();renderRewards();renderStats();renderDiary();renderBadges();updatePetStatus();updateCheckInButton();document.getElementById('agreement-text').value=state.agreement;document.getElementById('welcomeMessage').textContent=getWelcomeMessage()}
+function renderTodayTasks(){document.getElementById('todayTaskList').innerHTML=state.todayTasks.map((e,t)=>`<li class="${e.completed?"completed":""}" style="border-left-color:${getCategoryColor(e.category)};"><div><span>${e.text} (+${e.points})</span><span class="task-category cat-${e.category}">${getCategoryName(e.category)}</span></div><div class="task-actions">${e.completed?"":`<button class="btn-small" onclick="toggleTask(${t})">完成</button>`}<button class="btn-small btn-delete" onclick="removeTaskFromToday(${t})">移除</button></div></li>`).join("")}
+function renderTaskPool(){document.getElementById('taskPoolList').innerHTML=state.taskPool.map((e,t)=>{const isAdded=state.todayTasks.some(todayTask=>todayTask.id===e.id);return `<li style="border-left-color:${getCategoryColor(e.category)};"><div><span>${e.text} (+${e.points})</span><span class="task-category cat-${e.category}">${getCategoryName(e.category)}</span><span class="task-schedule-tag">${getScheduleName(e.schedule)}</span></div><div class="task-actions"><button class="btn-small" onclick="addTaskToToday(${t})" ${isAdded?"disabled title='今天已添加此任务'":""}>${isAdded?"已添加":"+"}</button><button class="btn-small btn-edit" onclick="openEditModal(${t})">编辑</button><button class="btn-small btn-delete" onclick="deleteTaskFromPool(${t})">X</button></div></li>`}).join("")}
+function renderRewards(){document.getElementById('rewardList').innerHTML=state.rewards.map((e,t)=>`<li><div><span>${e.text}</span><br><small>价格: ${e.cost} 积分</small></div><div class="task-actions"><button class="btn-small" onclick="redeemReward(${t})">兑换</button><button class="btn-small btn-delete" onclick="deleteReward(${t})">X</button></div></li>`).join("")}
+function renderStats(){document.getElementById('pointsDisplay').textContent=state.points;document.getElementById('experienceDisplay').textContent=state.experience;document.getElementById('streakDisplay').textContent=state.streak;const e=getCurrentLevel(state.experience);document.getElementById('levelDisplay').textContent=e.level;const t=document.getElementById('xp-progress-bar');t.value=e.progress;t.max=e.xpForNext;document.getElementById('lastPeriodPointsDisplay').textContent=state.history.lastPeriodPoints;document.getElementById('totalPointsDisplay').textContent=state.history.totalPoints;}
+function renderBadges(){document.getElementById('badgeList').innerHTML=state.badges.map((e,t)=>{const a=state.unlockedBadges.includes(e.name);return `<div class="badge-item"><span class="badge ${a?"unlocked":""}" title="${e.name}: ${e.desc}">${e.icon}</span>${e.isDefault?"":`<button class="btn-delete-badge" onclick="deleteBadge(${t})">X</button>`}</div>`}).join("")}
+function renderDiary(){document.getElementById('diaryList').innerHTML=state.diary.map(e=>`<li><strong>${e.date}:</strong> ${e.text}</li>`).join("")}
+
+function updatePetStatus(){const petImage=document.getElementById('pet-image-container');const completionRate=state.todayTasks.length>0?state.todayTasks.filter(t=>t.completed).length/state.todayTasks.length:0;state.pet.happiness=Math.max(0,Math.min(100,state.pet.happiness));let status='thinking';if(state.pet.happiness>80||completionRate>0.8)status='happy';else if(state.pet.happiness<40)status='bored';petImage.style.backgroundImage=`url('${PET_IMAGES[status]}')`}
+function showPetSpeech(text,duration=3000){const bubble=document.getElementById('pet-speech-bubble');const image=document.getElementById('pet-image-container');bubble.textContent=text;bubble.classList.add('show');image.classList.add('bounce');setTimeout(()=>{bubble.classList.remove('show');image.classList.remove('bounce')},duration)}
+function getWelcomeMessage(){const e=(new Date).getHours();if(e<6)return "夜深了, 小鱼儿, 和云宝一起休息吧！";if(e<12)return "早上好, 小鱼儿！新的一天, 元气满满！";if(e<18)return "下午好, 小鱼儿！今天和云宝一起加油！";return "晚上好, 小鱼儿！今天也是超棒的一天！"}
+function updateCheckInButton(){const e=(new Date).toDateString();const btn=document.getElementById('btnCheckIn');btn.disabled=state.lastCheckInDate===e;btn.textContent=btn.disabled?'今日已签到':'每日签到'}
+
+function addTaskToPool(){const input=document.getElementById('taskInput');const pointsInput=document.getElementById('taskPointsInput');const category=document.getElementById('taskCategoryInput').value;const schedule=document.getElementById('taskScheduleInput').value;const text=input.value.trim();const points=parseInt(pointsInput.value);if(!text||isNaN(points)||points<=0){alert("请输入有效的任务和积分！");return}state.taskPool.push({id:Date.now(),text,points,category,schedule});input.value='';pointsInput.value='';saveData();renderTaskPool()}
+function addTemporaryTask() {const input=document.getElementById('tempTaskInput');const pointsInput=document.getElementById('tempTaskPointsInput');const category=document.getElementById('tempTaskCategoryInput').value;const text=input.value.trim();const points=parseInt(pointsInput.value);if(!text||isNaN(points)||points<=0){alert("请输入有效的临时任务和积分！");return}state.todayTasks.push({id:Date.now(),text,points,category,completed:false,isTemporary:true});input.value='';pointsInput.value='';saveData();renderAll();}
+function addTaskToToday(poolIndex){const task=state.taskPool[poolIndex];if(state.todayTasks.some(t=>t.id===task.id)){alert("这个任务今天已经添加过了哦！");return}state.todayTasks.push({...task,completed:false});saveData();renderAll()}
+function removeTaskFromToday(todayIndex){state.todayTasks.splice(todayIndex,1);saveData();renderAll()}
+function deleteTaskFromPool(poolIndex){if(confirm("确定要从任务池中永久删除这个任务吗？")){state.taskPool.splice(poolIndex,1);saveData();renderTaskPool()}}
+function toggleTask(todayIndex){const task=state.todayTasks[todayIndex];task.completed=true;state.points+=task.points;state.experience+=task.points;state.pet.happiness=Math.min(100,state.pet.happiness+5);addDiaryEntry(`完成了任务 \"${task.text}\"，好棒！`);checkBadges();saveData();renderAll()}
+function checkIn(){const todayStr=(new Date).toDateString();if(state.lastCheckInDate===todayStr)return;const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);state.streak=state.lastCheckInDate===yesterday.toDateString()?state.streak+1:1;state.points+=10;state.experience+=10;state.lastCheckInDate=todayStr;addDiaryEntry(`每日签到！获得了10积分！连续签到 ${state.streak} 天！`);checkBadges();saveData();renderAll()}
+function feedPet(){if(state.points<10){showPetSpeech("积分不足，喂不起啦 T_T");return}const now=Date.now();if(now-state.pet.lastFed<600*1000){showPetSpeech("刚吃过，肚子还饱着呢！(10分钟冷却)");return}state.points-=10;state.pet.happiness=Math.min(100,state.pet.happiness+20);state.pet.lastFed=now;playPetSound('feed');showPetSpeech("真好吃，谢谢你！");addDiaryEntry("喂了云宝，它看起来很开心！");saveData();renderAll()}
+function petPet(){if(state.points<5){showPetSpeech("积分不够，摸不了了 >_<");return}const now=Date.now();if(now-state.pet.lastPetted<60*1000){showPetSpeech("好舒服，但让我先歇会儿~ (1分钟冷却)");return}state.points-=5;state.pet.happiness=Math.min(100,state.pet.happiness+10);state.pet.lastPetted=now;playPetSound('pet');showPetSpeech("最喜欢被你抚摸了！❤");saveData();renderAll()}
+function addDiaryEntry(text=null,fromInput=false){const input=document.getElementById('diaryInput');const entryText=fromInput?input.value.trim():text;if(!entryText)return;const date=(new Date).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});state.diary.unshift({date,text:entryText});if(state.diary.length>10)state.diary.pop();if(fromInput)input.value='';saveData();renderDiary()}
+function saveAgreement(){state.agreement=document.getElementById('agreement-text').value;saveData()}
+function addBadge(){const icon=document.getElementById('badgeIcon').value.trim();const name=document.getElementById('badgeName').value.trim();const type=document.getElementById('badgeConditionType').value;const value=parseInt(document.getElementById('badgeConditionValue').value);const reward=parseInt(document.getElementById('badgeReward').value);if(!icon||!name||!type||isNaN(value)||isNaN(reward)){alert("请填写完整的徽章信息！");return}const desc=`解锁条件：${document.getElementById('badgeConditionType').options[document.getElementById('badgeConditionType').selectedIndex].text} ${value}，奖励 ${reward} 积分`;state.badges.push({id:Date.now(),icon,name,desc,condition:{type,value},reward});saveData();renderBadges();['badgeIcon','badgeName','badgeConditionValue','badgeReward'].forEach(id=>document.getElementById(id).value='')}
+function deleteBadge(index){if(state.badges[index].isDefault){alert("不能删除默认徽章哦！");return}if(confirm(`确定要删除徽章 \"${state.badges[index].name}\" 吗？`)){state.badges.splice(index,1);saveData();renderBadges()}}
+function checkBadges(){const currentLevel=getCurrentLevel(state.experience).level;const totalCompletedTasksThisPeriod=state.todayTasks.filter(t=>t.completed).length;state.badges.forEach(badge=>{if(!state.unlockedBadges.includes(badge.name)){let unlocked=false;switch(badge.condition.type){case 'streak':if(state.streak>=badge.condition.value)unlocked=true;break;case 'totalTasks':if(totalCompletedTasksThisPeriod>=badge.condition.value)unlocked=true;break;case 'totalXP':if(state.experience>=badge.condition.value)unlocked=true;break;case 'level':if(currentLevel>=badge.condition.value)unlocked=true;break}if(unlocked){state.unlockedBadges.push(badge.name);state.points+=badge.reward;state.experience+=badge.reward;addDiaryEntry(`🎉 解锁新徽章: ${badge.icon} ${badge.name}！获得 ${badge.reward} 积分奖励！`);alert(`🎉 恭喜！解锁新徽章: ${badge.icon} ${badge.name}！\n${badge.desc}`);renderAll()}}})}
+function addReward(){const input=document.getElementById('rewardInput');const costInput=document.getElementById('rewardCostInput');const text=input.value.trim();const cost=parseInt(costInput.value);if(!text||isNaN(cost)||cost<=0){alert("请输入有效的奖励和所需积分！");return}state.rewards.push({id:Date.now(),text,cost});input.value='';costInput.value='';saveData();renderRewards()}
+function redeemReward(index){const reward=state.rewards[index];if(state.points<reward.cost){alert("哎呀，积分还不够哦，加油！");return}if(confirm(`确定要用 ${reward.cost} 积分兑换 \"${reward.text}\" 吗？`)){state.points-=reward.cost;addDiaryEntry(`成功兑换了奖励 \"${reward.text}\"！`);showPetSpeech("哇，你真棒！", 3000);saveData();renderAll()}}
+function deleteReward(index){if(confirm("确定要删除这个奖励吗？")){state.rewards.splice(index,1);saveData();renderRewards()}}
+function startNewPeriod(){if(confirm("您确定要结算当前周期，开启新的一月吗？\n'本期可用积分'和'打卡天数'将被重置，但'年度累计积分'和'总经验'会保留并累加。")){state.history.lastPeriodPoints=state.points;state.history.totalPoints+=state.points;state.points=100;state.streak=0;const completedThisPeriod=state.todayTasks.filter(t=>t.completed).length;addDiaryEntry(`上一个周期圆满结束！共结余 ${state.history.lastPeriodPoints} 积分，完成了 ${completedThisPeriod} 个任务！新周期加油！`);alert(`结算成功！你上个周期结余了 ${state.history.lastPeriodPoints} 积分！\n新的周期开始了，你获得了100启动积分，继续努力吧！`);state.todayTasks=[];saveData();renderAll()}}
+function getCategoryColor(category){if(category==='learning')return '#42a5f5';if(category==='behavior')return '#ffa726';return '#66bb6a'}
+function getCategoryName(category){if(category==='learning')return '学习习惯';if(category==='behavior')return '行为习惯';return '家务劳动'}
+function getScheduleName(schedule){if(schedule==='weekday')return '学习日';if(schedule==='weekend')return '周末';return '每日'}
+function getCurrentLevel(xp){let level=1,title=LEVELS[0].title,progress=xp,xpForNext=LEVELS[1]?LEVELS[1].xp:xp;for(let i=LEVELS.length-1;i>=0;i--){if(xp>=LEVELS[i].xp){level=i+1;title=LEVELS[i].title;const nextLevelXP=LEVELS[i+1]?LEVELS[i+1].xp:xp;progress=xp-LEVELS[i].xp;xpForNext=nextLevelXP-LEVELS[i].xp;break}}return{level,title,progress,xpForNext:xpForNext||1,index:level-1}}
+let audioCtx;
+function playPetSound(type='pet'){if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){console.error("Web Audio API is not supported in this browser");return}}const oscillator=audioCtx.createOscillator();const gainNode=audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);if(type==='pet'){oscillator.type='sine';oscillator.frequency.setValueAtTime(600,audioCtx.currentTime);gainNode.gain.setValueAtTime(0.5,audioCtx.currentTime);gainNode.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.5);oscillator.start(audioCtx.currentTime);oscillator.stop(audioCtx.currentTime+0.5)}else{oscillator.type='triangle';oscillator.frequency.setValueAtTime(440,audioCtx.currentTime);oscillator.frequency.exponentialRampToValueAtTime(880,audioCtx.currentTime+0.2);gainNode.gain.setValueAtTime(0.3,audioCtx.currentTime);gainNode.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.3);oscillator.start(audioCtx.currentTime);oscillator.stop(audioCtx.currentTime+0.3)}}
+
+function showReportModal() {const modal = document.getElementById('reportModal');const body = document.getElementById('reportModalBody');if (state.todayTasks.length === 0) {body.innerHTML = "<p>今天还没有计划任务哦！</p>";} else {let tableHTML = `<table><thead><tr><th>任务名称</th><th>积分</th><th>分类</th><th>状态</th></tr></thead><tbody>`;state.todayTasks.forEach(task => {tableHTML += `<tr><td>${task.text}</td><td>${task.points}</td><td>${getCategoryName(task.category)}</td><td>${task.completed ? '✅ 已完成' : '❌ 未完成'}</td></tr>`;});tableHTML += '</tbody></table>';body.innerHTML = tableHTML;}modal.style.display = 'block';}
+function closeReportModal() {document.getElementById('reportModal').style.display = 'none';}
+function downloadReportCSV() {if (state.todayTasks.length === 0) {alert("没有可下载的数据。");return;}let csvContent = "data:text/csv;charset=utf-8,\uFEFF";csvContent += "任务名称,积分,分类,状态\n";state.todayTasks.forEach(task => {const row = [`\"${task.text.replace(/\"/g, '\"\"')}\"`, task.points, getCategoryName(task.category), task.completed ? '已完成' : '未完成'].join(",");csvContent += row + "\n";});const encodedUri = encodeURI(csvContent);const link = document.createElement("a");link.setAttribute("href", encodedUri);const dateStr = new Date().toISOString().slice(0, 10);link.setAttribute("download", `小鱼儿今日报告-${dateStr}.csv`);document.body.appendChild(link);link.click();document.body.removeChild(link);}
+
+function openEditModal(index) {currentEditingTaskIndex = index;const task = state.taskPool[index];document.getElementById('editTaskInput').value = task.text;document.getElementById('editTaskPointsInput').value = task.points;document.getElementById('editTaskCategoryInput').value = task.category;document.getElementById('editTaskScheduleInput').value = task.schedule || 'everyday';document.getElementById('editTaskModal').style.display = 'block';}
+function closeEditModal() {document.getElementById('editTaskModal').style.display = 'none';currentEditingTaskIndex = null;}
+function saveTaskChanges() {if (currentEditingTaskIndex === null) return;const text = document.getElementById('editTaskInput').value.trim();const points = parseInt(document.getElementById('editTaskPointsInput').value);if (!text || isNaN(points) || points <= 0) {alert("请输入有效的任务和积分！");return;}const updatedTask = {...state.taskPool[currentEditingTaskIndex],text: text,points: points,category: document.getElementById('editTaskCategoryInput').value,schedule: document.getElementById('editTaskScheduleInput').value};state.taskPool[currentEditingTaskIndex] = updatedTask;saveData();renderTaskPool();closeEditModal();}
+window.onclick = function(event) {if (event.target == document.getElementById('reportModal')) closeReportModal();if (event.target == document.getElementById('editTaskModal')) closeEditModal();}
+
+function initialize(){
+    loadData();
+    const todayStr = new Date().toDateString();
+    if (state.lastAutoUpdateDate !== todayStr) {
+        let newTodayTasks = [];
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0:Sun, 1:Mon, ..., 6:Sat
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        state.taskPool.forEach(task => {
+            const schedule = task.schedule; // Now guaranteed to exist by loadData()
+            const isEligible = (schedule === 'everyday') ||
+                               (schedule === 'weekday' && isWeekday) ||
+                               (schedule === 'weekend' && isWeekend);
+            if (isEligible) {
+                newTodayTasks.push({ ...task, completed: false });
+            }
+        });
+        state.todayTasks = newTodayTasks;
+        state.lastAutoUpdateDate = todayStr;
+        addDiaryEntry(`新的一天开始了，今日计划已自动生成！`);
+        saveData();
+    }
+    renderAll();
+}
+
+initialize();
+</script>
+</body>
+</html>
