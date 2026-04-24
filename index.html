@@ -96,7 +96,9 @@
     .emoji-tab.active{background:rgba(0,172,193,.15);border-color:rgba(0,172,193,.5)}
     .emoji-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;max-height:320px;overflow:auto;padding:8px;background:#fafafa;border:1px solid #eee;border-radius:12px}
     @media (max-width:560px){.emoji-grid{grid-template-columns:repeat(8,1fr)}}
-    .emoji-btn{background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 0;cursor:pointer;font-size:20px;line-height:1}
+    .emoji-btn{background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 0;cursor:pointer;line-height:1;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center}
+    .emoji-btn .emoji-char{font-size:20px;line-height:1}
+    .emoji-btn .emoji-label{font-size:11px;color:#607d8b;line-height:1}
     .emoji-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.06)}
     .emoji-search{display:flex;gap:10px;align-items:center}
     .emoji-search input{margin-bottom:0}
@@ -107,6 +109,17 @@
     .toast .desc{font-size:.88em;color:#546e7a}
     .empty{background:#fff;border:1px dashed rgba(0,0,0,.18);border-radius:12px;padding:12px;color:#607d8b}
     .empty-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+
+    /* Growth journey */
+    .chart-wrap{background:#fff;border:1px solid #eee;border-radius:14px;padding:12px}
+    .chart-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+    .chart-kpis{display:flex;gap:12px;flex-wrap:wrap}
+    .kpi{background:#f6fbfc;border:1px solid #e2f4f6;border-radius:12px;padding:8px 10px;min-width:120px}
+    .kpi .kpi-label{font-size:12px;color:#607d8b}
+    .kpi .kpi-value{font-size:18px;font-weight:900;color:#006a78}
+    .legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#546e7a}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
+    .dot-xp{background:#ff80ab}.dot-lv{background:#00acc1}
   </style>
 </head>
 <body>
@@ -206,12 +219,11 @@
         <div class="stats-grid">
           <div class="stat-item"><span id="pointsDisplay" class="stat-value">0</span><span class="stat-label">本期可用积分</span></div>
           <div class="stat-item"><span id="experienceDisplay" class="stat-value">0</span><span class="stat-label">总经验</span></div>
-          <div class="stat-item"><span id="streakDisplay" class="stat-value">0</span><span class="stat-label">连续打卡</span></div>
+          <div class="stat-item"><span id="streakDisplay" class="stat-value">0</span><span class="stat-label">连续完成</span></div>
           <div class="stat-item"><span id="levelDisplay" class="stat-value">1</span><span class="stat-label">等级</span></div>
         </div>
         <progress id="xp-progress-bar" value="0" max="100" style="width:100%;margin-top:10px"></progress>
-        <button id="btnCheckIn" style="width:100%; margin-top:15px;" onclick="checkIn()">每日签到</button>
-        <button id="btn-new-period" style="width:100%; margin-top:10px;" onclick="startNewPeriod()">🚀 开启新周期</button>
+                <button id="btn-new-period" style="width:100%; margin-top:10px;" onclick="startNewPeriod()">🚀 开启新周期</button>
 
         <div id="history-section">
           <h3>周期与历史成就</h3>
@@ -236,7 +248,7 @@
               </div>
               <div>
                 <select id="badgeConditionType" style="flex:2">
-                  <option value="streak">连续打卡天数</option>
+                  <option value="completionStreak">连续完成任务天数</option>
                   <option value="totalTasks">本期完成任务</option>
                   <option value="totalXP">累计获得经验</option>
                   <option value="level">达到等级</option>
@@ -270,6 +282,10 @@
         <div id="data-section">
           <h3><span class="icon">🧰</span> 数据与设置</h3>
           <div class="inline-hint">建议定期导出备份，换设备/清缓存也不怕。</div>
+          <div class="input-group">
+            <button class="btn-small" onclick="openGrowthJourney()">📈 成长历程</button>
+            <button class="btn-small btn-edit" onclick="downloadWeeklyReport()">📝 导出成长周报</button>
+          </div>
           <div class="input-group">
             <button class="btn-small" onclick="exportBackup()">导出备份(JSON)</button>
             <button class="btn-small btn-edit" onclick="triggerImport()">导入备份(JSON)</button>
@@ -352,6 +368,36 @@
     </div>
   </div>
 
+  <div id="growthModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>成长历程</h2><span class="close-button" onclick="closeGrowthJourney()">&times;</span></div>
+      <div class="modal-body" id="growthBody">
+        <div class="chart-head">
+          <div>
+            <div class="legend">
+              <span><span class="dot dot-xp"></span>总经验</span>
+              <span><span class="dot dot-lv"></span>等级</span>
+            </div>
+          </div>
+          <div class="chart-kpis">
+            <div class="kpi"><div class="kpi-label">当前总经验</div><div id="kpiXp" class="kpi-value">0</div></div>
+            <div class="kpi"><div class="kpi-label">当前等级</div><div id="kpiLv" class="kpi-value">1</div></div>
+            <div class="kpi"><div class="kpi-label">近7天完成任务</div><div id="kpi7Tasks" class="kpi-value">0</div></div>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="chart-wrap">
+          <div id="growthChart"></div>
+          <div class="inline-hint" style="margin-top:10px">说明：趋势来自“每天的完成记录”。如果某天没有完成任务，就不会产生数据点。</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-muted" onclick="downloadGrowthJSON()">下载成长数据(JSON)</button>
+        <button class="btn-muted" onclick="closeGrowthJourney()">关闭</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 // --- V1.6.0 CONFIG & DATA ---
 const STORAGE_KEY = 'fishGrowthPlan_data';
@@ -377,6 +423,17 @@ const EMOJI_CATEGORIES = {
   "动物": ["🐟","🐳","🐬","🐶","🐱","🐰","🦊","🐻","🐼","🐨","🐸","🦄","🐢"]
 };
 
+// Emoji 图标命名（用于选择器展示/搜索）
+const EMOJI_NAMES = {
+  "📚":"书本","✏️":"铅笔","🧠":"大脑","📝":"笔记","📖":"阅读","🔍":"探索","📐":"直尺三角","🧮":"算盘","🧪":"实验","🎓":"毕业帽","💡":"灵感","📌":"图钉","📎":"回形针","🗂️":"文件夹","🧾":"清单","🧑‍🏫":"老师",
+  "🔥":"火焰","⏳":"沙漏","✅":"完成","🏁":"终点旗","📆":"日历","📍":"定位","🧗":"攀登","🏋️":"力量训练","🥇":"金牌","🎯":"靶心","🧱":"积木","🚀":"火箭","🌟":"星星","🧭":"指南针","🧩":"拼图","🔁":"重复",
+  "🧹":"扫把","🧺":"洗衣篮","🧽":"海绵","🧴":"清洁液","🧼":"肥皂","🍽️":"餐具","🥣":"碗","🪣":"水桶","🛏️":"整理床铺","🧸":"玩偶","🪟":"擦窗","🚮":"丢垃圾",
+  "😊":"开心","😄":"大笑","😌":"放松","😎":"酷","🥳":"庆祝","🤗":"拥抱","🙂":"微笑","😇":"小天使","💛":"爱心","🫶":"比心","🌈":"彩虹","☀️":"太阳","🌙":"月亮",
+  "🎁":"礼物","🍦":"冰淇淋","🍪":"饼干","🎮":"游戏","🎬":"电影","🪄":"魔法棒","🎉":"彩带","🎡":"摩天轮","🍓":"草莓","🍕":"披萨","🧋":"奶茶",
+  "🎄":"圣诞树","🧧":"红包","🎃":"南瓜灯","🎆":"烟花","🎇":"焰火","🎂":"蛋糕","🎈":"气球","🕯️":"蜡烛","🌸":"樱花","🥮":"月饼","🐲":"龙",
+  "🐟":"小鱼","🐳":"鲸鱼","🐬":"海豚","🐶":"小狗","🐱":"小猫","🐰":"兔子","🦊":"狐狸","🐻":"小熊","🐼":"熊猫","🐨":"考拉","🐸":"青蛙","🦄":"独角兽","🐢":"乌龟"
+};
+
 let state = {};
 let currentEditingTaskIndex = null;
 let emojiPickerTab = "学习";
@@ -399,15 +456,19 @@ function toast(title, desc='', type='success', duration=2600){
 function getDefaultState(){
   return {
     taskPool: [], todayTasks: [], rewards: [], diaryByMonth: {},
-    badges: [{id: 1, icon:"🔥",name:"连击达人",desc:"连续打卡7天！奖励50积分！",condition:{type:"streak",value:7},reward:50,isDefault:true}],
+    badges: [{id: 1, icon:"🔥",name:"连击达人",desc:"连续完成任务 7 天！奖励50积分！",condition:{type:"completionStreak",value:7},reward:50,isDefault:true}],
     pet:{happiness:80,lastFed:0,lastPetted:0,freePetUsedDate:null},
     points: 100, experience: 0, streak: 0,
+    lastCompletionDate: null,
     unlockedBadges: [], history: { lastPeriodPoints: 0, totalPoints: 0 },
     agreement:"我们是最好的伙伴！要一起努力，一起成长！",
-    lastCheckInDate: null, lastAutoUpdateDate: null,
+    lastAutoUpdateDate: null,
     meta: { lastSavedAt: null },
     settings: { requireParentConfirmTempTasks: true },
-    recentBadgeIcons: []
+    recentBadgeIcons: [],
+    taskHistory: [],
+    rewardHistory: [],
+    dailyHistory: []
   };
 }
 
@@ -428,6 +489,10 @@ function migrateOldState(loaded){
   if(!s.rewards) s.rewards = [];
   if(!Array.isArray(s.unlockedBadges)) s.unlockedBadges = [];
   if(!Array.isArray(s.recentBadgeIcons)) s.recentBadgeIcons = [];
+  if(!Array.isArray(s.taskHistory)) s.taskHistory = [];
+  if(!Array.isArray(s.rewardHistory)) s.rewardHistory = [];
+  if(!Array.isArray(s.dailyHistory)) s.dailyHistory = [];
+  if(typeof s.lastCompletionDate === 'undefined') s.lastCompletionDate = null;
 
   if (s.taskPool && Array.isArray(s.taskPool)) {
     s.taskPool.forEach(task => {
@@ -466,9 +531,132 @@ function loadData(){
 
 function monthKeyFromDate(d){const dt=d instanceof Date?d:new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;}
 function weekKey(d){const date=new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dayNum=date.getUTCDay()||7; date.setUTCDate(date.getUTCDate()+4-dayNum); const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1)); const weekNo=Math.ceil((((date-yearStart)/86400000)+1)/7); return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;}
+
+function upsertDailySnapshot(){
+  const date = new Date().toISOString().slice(0,10);
+  state.dailyHistory = state.dailyHistory || [];
+  const level = getCurrentLevel(state.experience).level;
+  const existing = state.dailyHistory.find(x=>x.date===date);
+  const snapshot = {
+    date,
+    experience: state.experience,
+    level,
+    points: state.points,
+    tasksCompleted: state.daily?.tasksCompleted || 0,
+    pointsEarned: state.daily?.pointsEarned || 0
+  };
+  if(existing){Object.assign(existing, snapshot);}
+  else {state.dailyHistory.push(snapshot); state.dailyHistory.sort((a,b)=>a.date.localeCompare(b.date));}
+}
+
+function lastNDates(n){
+  const arr=[];
+  const d=new Date();
+  for(let i=0;i<n;i++){
+    const x=new Date(d); x.setDate(x.getDate()-i);
+    arr.push(x.toISOString().slice(0,10));
+  }
+  return arr.reverse();
+}
+
+function openGrowthJourney(){
+  document.getElementById('growthModal').style.display='block';
+  renderGrowthJourney();
+}
+function closeGrowthJourney(){document.getElementById('growthModal').style.display='none';}
+
+function renderGrowthJourney(){
+  upsertDailySnapshot();
+  const kpiXp=document.getElementById('kpiXp');
+  const kpiLv=document.getElementById('kpiLv');
+  const kpi7=document.getElementById('kpi7Tasks');
+  kpiXp.textContent = String(state.experience);
+  kpiLv.textContent = String(getCurrentLevel(state.experience).level);
+
+  const dates7 = lastNDates(7);
+  const tasks7 = (state.taskHistory||[]).filter(t=>dates7.includes(t.date)).length;
+  kpi7.textContent = String(tasks7);
+
+  const chartEl=document.getElementById('growthChart');
+  chartEl.innerHTML = buildGrowthChartSVG();
+}
+
+function buildGrowthChartSVG(){
+  const data = (state.dailyHistory||[]).slice(-60); // 最多展示近60个点
+  if(!data.length){
+    return '<div class="empty">还没有成长数据。先完成一些任务，明天再来看看趋势吧！</div>';
+  }
+
+  const w = 640, h = 260, pad = 34;
+  const xp = data.map(d=>d.experience);
+  const lv = data.map(d=>d.level);
+  const xpMin = Math.min(...xp);
+  const xpMax = Math.max(...xp);
+  const lvMin = Math.min(...lv);
+  const lvMax = Math.max(...lv);
+
+  const x = (i)=> pad + (data.length===1?0:(i*(w-2*pad)/(data.length-1)));
+  const yXp = (v)=> {
+    if(xpMax===xpMin) return h/2;
+    return (h-pad) - ((v-xpMin)*(h-2*pad)/(xpMax-xpMin));
+  };
+  const yLv = (v)=> {
+    if(lvMax===lvMin) return h/2;
+    return (h-pad) - ((v-lvMin)*(h-2*pad)/(lvMax-lvMin));
+  };
+
+  const xpPts = data.map((d,i)=>`${x(i).toFixed(1)},${yXp(d.experience).toFixed(1)}`).join(' ');
+  const lvPts = data.map((d,i)=>`${x(i).toFixed(1)},${yLv(d.level).toFixed(1)}`).join(' ');
+
+  // x 轴标签：只显示首/中/尾
+  const idxMid = Math.floor((data.length-1)/2);
+  const labels = [0, idxMid, data.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  const labelEls = labels.map(i=>{
+    const dt = data[i].date.slice(5);
+    return `<text x="${x(i)}" y="${h-10}" text-anchor="middle" font-size="11" fill="#78909c">${dt}</text>`;
+  }).join('');
+
+  // y 轴参考线 3 条
+  const grid = [0.25,0.5,0.75].map(p=>{
+    const yy = pad + (h-2*pad)*p;
+    return `<line x1="${pad}" y1="${yy}" x2="${w-pad}" y2="${yy}" stroke="#eef2f3" />`;
+  }).join('');
+
+  const last = data[data.length-1];
+  const tip = `最近：${last.date} · 经验 ${last.experience} · 等级 ${last.level}`;
+
+  return `
+  <div style="overflow:auto">
+    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="成长趋势图">
+      ${grid}
+      <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#dfe7ea" />
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="#dfe7ea" />
+
+      <polyline points="${xpPts}" fill="none" stroke="#ff80ab" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <polyline points="${lvPts}" fill="none" stroke="#00acc1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 4" />
+
+      <circle cx="${x(data.length-1)}" cy="${yXp(last.experience)}" r="4" fill="#ff80ab" />
+      <circle cx="${x(data.length-1)}" cy="${yLv(last.level)}" r="4" fill="#00acc1" />
+
+      ${labelEls}
+    </svg>
+    <div class="inline-hint">${escapeHtml(tip)}</div>
+  </div>`;
+}
+
+function downloadGrowthJSON(){
+  const payload = {version:'1.6.0', exportedAt: nowISO(), dailyHistory: state.dailyHistory||[]};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`小鱼儿成长历程-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('已导出成长数据','JSON 文件已下载','success');
+}
 function getTodayStr(){return new Date().toDateString();}
 
-function renderAll(){renderTodayTasks();renderTaskPool();renderRewards();renderStats();renderDiary();renderBadges();updatePetStatus();updateCheckInButton();document.getElementById('agreement-text').value=state.agreement;document.getElementById('welcomeMessage').textContent=getWelcomeMessage();renderStorageStatus();syncSettingsUI();}
+function renderAll(){renderTodayTasks();renderTaskPool();renderRewards();renderStats();renderDiary();renderBadges();updatePetStatus();document.getElementById('agreement-text').value=state.agreement;document.getElementById('welcomeMessage').textContent=getWelcomeMessage();renderStorageStatus();syncSettingsUI();}
 
 function renderTodayTasks(){
   const list=document.getElementById('todayTaskList');
@@ -558,7 +746,7 @@ function currentBadgeProgress(badge){
   const target = badge.condition?.value || 1;
   let current = 0;
   switch(badge.condition?.type){
-    case 'streak': current=state.streak; break;
+    case 'completionStreak': current=state.streak; break;
     case 'totalTasks': current=state.todayTasks.filter(t=>t.completed).length; break;
     case 'totalXP': current=state.experience; break;
     case 'level': current=getCurrentLevel(state.experience).level; break;
@@ -641,12 +829,6 @@ function getWelcomeMessage(){
   return "晚上好, 小鱼儿！今天也是超棒的一天！";
 }
 
-function updateCheckInButton(){
-  const todayStr=getTodayStr();
-  const btn=document.getElementById('btnCheckIn');
-  btn.disabled=state.lastCheckInDate===todayStr;
-  btn.textContent=btn.disabled?'今日已签到':'每日签到';
-}
 
 function addTaskToPool(){
   const input=document.getElementById('taskInput');
@@ -729,6 +911,29 @@ function toggleTask(todayIndex){
   state.pet.happiness = Math.min(100, state.pet.happiness + 5);
   state.daily.pointsEarned += t.points;
   state.daily.tasksCompleted += 1;
+
+  // 任务完成历史（用于周报/成长历程）
+  state.taskHistory = state.taskHistory || [];
+  state.taskHistory.unshift({
+    at: nowISO(),
+    date: new Date().toISOString().slice(0,10),
+    text: t.text,
+    points: t.points,
+    category: t.category,
+    isTemporary: !!t.isTemporary
+  });
+
+  // 连续完成：每天至少完成 1 个任务算 1 天
+  const todayStr = getTodayStr();
+  if(state.lastCompletionDate !== todayStr){
+    const y = new Date();
+    y.setDate(y.getDate()-1);
+    state.streak = (state.lastCompletionDate === y.toDateString()) ? (state.streak + 1) : 1;
+    state.lastCompletionDate = todayStr;
+  }
+
+  upsertDailySnapshot();
+
   addDiaryEntry(`完成了任务“${t.text}”，获得 ${t.points} 积分！`);
   checkBadges();
   saveData();
@@ -736,22 +941,6 @@ function toggleTask(todayIndex){
   toast('任务完成！', `+${t.points} 积分`, 'success');
 }
 
-function checkIn(){
-  const todayStr=getTodayStr();
-  if(state.lastCheckInDate===todayStr) return;
-  ensureDaily();
-  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
-  state.streak = state.lastCheckInDate===yesterday.toDateString()?state.streak+1:1;
-  state.points += 10;
-  state.experience += 10;
-  state.daily.pointsEarned += 10;
-  state.lastCheckInDate=todayStr;
-  addDiaryEntry(`每日签到！获得了10积分！连续签到 ${state.streak} 天！`);
-  checkBadges();
-  saveData();
-  renderAll();
-  toast('签到成功', '+10 积分', 'success');
-}
 
 function feedPet(){
   if(state.points<10){showPetSpeech('积分不足，喂不起啦 T_T'); toast('积分不足','先完成任务攒积分吧','warn'); return}
@@ -875,7 +1064,7 @@ function checkBadges(){
     if(state.unlockedBadges.includes(badge.name)) return;
     let unlocked=false;
     switch(badge.condition.type){
-      case 'streak': unlocked=state.streak>=badge.condition.value; break;
+      case 'completionStreak': unlocked=state.streak>=badge.condition.value; break;
       case 'totalTasks': unlocked=totalCompletedTasksThisPeriod>=badge.condition.value; break;
       case 'totalXP': unlocked=state.experience>=badge.condition.value; break;
       case 'level': unlocked=currentLevel>=badge.condition.value; break;
@@ -930,7 +1119,11 @@ function renderEmojiPicker(){
     gridEl.innerHTML = '<div style="grid-column:1/-1;color:#78909c;padding:8px">还没有“最近”记录，先随便选几个～</div>';
     return;
   }
-  gridEl.innerHTML = items.map(e=>`<button class="emoji-btn" onclick="selectEmoji('${e}')">${e}</button>`).join('');
+  gridEl.innerHTML = items.map(e=>{
+    const name = EMOJI_NAMES[e] || '';
+    const title = name ? `${name} (${e})` : e;
+    return `<button class="emoji-btn" title="${escapeHtml(title)}" onclick="selectEmoji('${e}')"><div class="emoji-char">${e}</div><div class="emoji-label">${escapeHtml(name||'')}</div></button>`;
+  }).join('');
 }
 function setEmojiTab(name){emojiPickerTab=name;renderEmojiPicker();}
 
@@ -990,6 +1183,17 @@ function doRedeemReward(index){
   state.points -= reward.cost;
   reward.redeemCounts=reward.redeemCounts||{};
   reward.redeemCounts[check.wk]=(reward.redeemCounts[check.wk]||0)+1;
+
+  state.rewardHistory = state.rewardHistory || [];
+  state.rewardHistory.unshift({
+    at: nowISO(),
+    date: new Date().toISOString().slice(0,10),
+    text: reward.text,
+    cost: reward.cost
+  });
+
+  upsertDailySnapshot();
+
   addDiaryEntry(`成功兑换了奖励“${reward.text}”（花费 ${reward.cost} 积分）。`);
   showPetSpeech('哇，你真棒！', 2500);
   saveData();
@@ -1103,7 +1307,150 @@ function saveTaskChanges(){
 }
 
 // Backup / Import / Reset
+function getDiaryEntriesBetween(startDate,endDate){
+  // start/end: YYYY-MM-DD inclusive
+  const res=[];
+  const start = new Date(startDate+"T00:00:00");
+  const end = new Date(endDate+"T23:59:59");
+  const months = Object.keys(state.diaryByMonth||{});
+  for(const m of months){
+    const arr = state.diaryByMonth[m] || [];
+    for(const it of arr){
+      // it.date like MM/DD, no year; assume current year for report display
+      // If it has ISO date in future versions, prefer it.iso
+      if(it.iso){
+        const d = new Date(it.iso);
+        if(d>=start && d<=end) res.push({at: it.iso, text: it.text, label: it.date});
+      } else {
+        // fallback: include recent 7 days diary conservatively (we don't have year)
+        // We'll include by list position only when within range by matching MM/DD in range.
+        const label = it.date;
+        res.push({at: null, text: it.text, label});
+      }
+    }
+  }
+  // Since legacy diary lacks real date, keep only latest 30 lines to avoid noise
+  return res.slice(0,30);
+}
+
+function downloadWeeklyReport(){
+  // 近7天周报（含今天）
+  const today = new Date();
+  const end = today.toISOString().slice(0,10);
+  const startD = new Date(today); startD.setDate(startD.getDate()-6);
+  const start = startD.toISOString().slice(0,10);
+  const rangeLabel = `${start} ~ ${end}`;
+
+  // Tasks
+  const tasks = (state.taskHistory||[]).filter(t=>t.date>=start && t.date<=end).slice().reverse();
+  const tasksDone = tasks.length;
+  const pointsEarned = tasks.reduce((s,t)=>s+(t.points||0),0);
+  const byCat = {learning:0, behavior:0, chores:0};
+  tasks.forEach(t=>{byCat[t.category] = (byCat[t.category]||0)+1;});
+
+  // Rewards
+  const rewards = (state.rewardHistory||[]).filter(r=>r.date>=start && r.date<=end).slice().reverse();
+  const rewardSpent = rewards.reduce((s,r)=>s+(r.cost||0),0);
+
+  // Growth
+  const dh = (state.dailyHistory||[]).filter(d=>d.date>=start && d.date<=end);
+  const xpStart = dh.length ? dh[0].experience : (state.experience - pointsEarned);
+  const xpEnd = dh.length ? dh[dh.length-1].experience : state.experience;
+  const lvStart = dh.length ? dh[0].level : getCurrentLevel(xpStart).level;
+  const lvEnd = dh.length ? dh[dh.length-1].level : getCurrentLevel(xpEnd).level;
+
+  // Diary (best-effort)
+  const diary = getDiaryEntriesBetween(start,end);
+
+  const css = `
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f6fbfc;margin:0;padding:24px;color:#102a2f}
+    .paper{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e6f2f4;border-radius:18px;box-shadow:0 18px 40px rgba(0,0,0,.08);overflow:hidden}
+    header{padding:26px 26px 18px;background:linear-gradient(135deg,#e0f7fa,#b2ebf2)}
+    h1{margin:0;font-size:28px;color:#006a78}
+    .sub{margin-top:6px;color:#2b6f79;font-weight:700}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px 26px}
+    .card{border:1px solid #eef5f6;border-radius:14px;padding:12px;background:#fbfeff}
+    .label{font-size:12px;color:#6b8b91}
+    .value{font-size:22px;font-weight:900;color:#0b4952;margin-top:4px}
+    .sec{padding:0 26px 22px}
+    h2{font-size:16px;margin:18px 0 10px;color:#0b4952}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #eef2f3;padding:8px 10px;text-align:left}
+    th{background:#f3fbfc;color:#0b4952}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;color:#fff}
+    .p-learning{background:#42a5f5}.p-behavior{background:#ffa726}.p-chores{background:#66bb6a}
+    .muted{color:#6b8b91;font-size:12px}
+    footer{padding:14px 26px 22px;color:#6b8b91;font-size:12px}
+    @media print{body{background:#fff;padding:0}.paper{box-shadow:none;border:none;border-radius:0}}
+  `;
+
+  const catName = (c)=>c==='learning'?'学习习惯':c==='behavior'?'行为习惯':'家务劳动';
+  const catPill = (c)=>`<span class="pill p-${c}">${catName(c)}</span>`;
+
+  const tasksRows = tasksDone ? tasks.map(t=>`<tr><td>${t.date}</td><td>${escapeHtml(t.text)}</td><td>${catPill(t.category)}</td><td>${t.points}</td><td>${t.isTemporary?'临时':''}</td></tr>`).join('') : `<tr><td colspan="5" class="muted">本周暂无完成记录。</td></tr>`;
+  const rewardRows = rewards.length ? rewards.map(r=>`<tr><td>${r.date}</td><td>${escapeHtml(r.text)}</td><td>${r.cost}</td></tr>`).join('') : `<tr><td colspan="3" class="muted">本周暂无兑换记录。</td></tr>`;
+  const diaryRows = diary.length ? diary.map(d=>`<li>${escapeHtml(d.label||'')} ${escapeHtml(d.text)}</li>`).join('') : `<li class="muted">本周暂无日记记录。</li>`;
+
+  const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>小鱼儿成长周报 ${rangeLabel}</title>
+    <style>${css}</style>
+  </head><body>
+    <div class="paper">
+      <header>
+        <h1>小鱼儿成长周报</h1>
+        <div class="sub">时间范围：${rangeLabel} · 生成时间：${new Date().toLocaleString('zh-CN',{hour12:false})}</div>
+      </header>
+
+      <section class="grid">
+        <div class="card"><div class="label">本周完成任务</div><div class="value">${tasksDone}</div></div>
+        <div class="card"><div class="label">本周获得积分</div><div class="value">${pointsEarned}</div></div>
+        <div class="card"><div class="label">本周兑换花费</div><div class="value">${rewardSpent}</div></div>
+        <div class="card"><div class="label">经验 / 等级变化</div><div class="value">${xpStart}→${xpEnd} / LV${lvStart}→LV${lvEnd}</div></div>
+      </section>
+
+      <section class="sec">
+        <h2>分类概览</h2>
+        <table>
+          <thead><tr><th>学习习惯</th><th>行为习惯</th><th>家务劳动</th></tr></thead>
+          <tbody><tr><td>${byCat.learning||0}</td><td>${byCat.behavior||0}</td><td>${byCat.chores||0}</td></tr></tbody>
+        </table>
+        <div class="muted" style="margin-top:8px">小建议：一周里三类都“有记录”，会比只刷某一类更均衡。</div>
+
+        <h2>完成任务明细</h2>
+        <table>
+          <thead><tr><th>日期</th><th>任务</th><th>分类</th><th>积分</th><th>备注</th></tr></thead>
+          <tbody>${tasksRows}</tbody>
+        </table>
+
+        <h2>奖励兑换明细</h2>
+        <table>
+          <thead><tr><th>日期</th><th>奖励</th><th>花费(积分)</th></tr></thead>
+          <tbody>${rewardRows}</tbody>
+        </table>
+
+        <h2>成长日记摘录（最近）</h2>
+        <ul>${diaryRows}</ul>
+        <div class="muted">提示：下载后可在浏览器里按 Ctrl+P（打印）保存为 PDF。</div>
+      </section>
+
+      <footer>
+        数据来源：本页面的任务完成记录 / 兑换记录 / 日记（本地存储）。
+      </footer>
+    </div>
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `小鱼儿成长周报-${end}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('周报已导出','下载的是HTML，可直接打印成PDF','success');
+}
+
 function exportBackup(){
+
   try{
     const data = { version: '1.6.0', exportedAt: nowISO(), data: state };
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -1167,13 +1514,23 @@ function renderEmojiPicker(){
   }).join('');
 
   let items = EMOJI_CATEGORIES[emojiPickerTab] || [];
-  if(q){items = Object.values(EMOJI_CATEGORIES).flat().filter(x=>x.includes(q));}
+  if(q){
+    const all = Object.values(EMOJI_CATEGORIES).flat();
+    items = all.filter(e=>{
+      const name = EMOJI_NAMES[e] || '';
+      return e.includes(q) || name.includes(q);
+    });
+  }
 
   if(emojiPickerTab==='最近' && items.length===0 && !q){
     gridEl.innerHTML = '<div style="grid-column:1/-1;color:#78909c;padding:8px">还没有“最近”记录，先随便选几个～</div>';
     return;
   }
-  gridEl.innerHTML = items.map(e=>`<button class="emoji-btn" onclick="selectEmoji('${e}')">${e}</button>`).join('');
+  gridEl.innerHTML = items.map(e=>{
+    const name = EMOJI_NAMES[e] || '';
+    const title = name ? `${name} (${e})` : e;
+    return `<button class="emoji-btn" title="${escapeHtml(title)}" onclick="selectEmoji('${e}')"><div class="emoji-char">${e}</div><div class="emoji-label">${escapeHtml(name||'')}</div></button>`;
+  }).join('');
 }
 function setEmojiTab(name){emojiPickerTab=name;renderEmojiPicker();}
 
@@ -1183,6 +1540,7 @@ window.onclick = function(event){
   if(event.target===document.getElementById('editTaskModal')) closeEditModal();
   if(event.target===document.getElementById('emojiPickerModal')) closeEmojiPicker();
   if(event.target===document.getElementById('rewardConfirmModal')) closeRewardConfirmModal();
+  if(event.target===document.getElementById('growthModal')) closeGrowthJourney();
 }
 
 function initialize(){
@@ -1210,6 +1568,10 @@ function initialize(){
     addDiaryEntry('新的一天开始了，今日计划已自动生成！');
     saveData();
   }
+
+  // 初始化时写入一次成长快照
+  upsertDailySnapshot();
+  saveData();
 
   renderAll();
 
