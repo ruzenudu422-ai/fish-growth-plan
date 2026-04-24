@@ -117,6 +117,8 @@
     .kpi{background:#f6fbfc;border:1px solid #e2f4f6;border-radius:12px;padding:8px 10px;min-width:120px}
     .kpi .kpi-label{font-size:12px;color:#607d8b}
     .kpi .kpi-value{font-size:18px;font-weight:900;color:#006a78}
+    /* Level display is text-rich */
+    #levelDisplay.stat-value{font-size:1.1em;line-height:1.15}
     .legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#546e7a}
     .dot{width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px}
     .dot-xp{background:#ff80ab}.dot-lv{background:#00acc1}
@@ -132,10 +134,10 @@
     <div id="pet-partner" class="panel">
       <div class="pet-container" onclick="petPet()">
         <div id="pet-image-container" class="pet-image"></div>
-        <span>云宝（点击抚摸：今日前 1 次免费，之后消耗 5 积分）</span>
+        <span>云宝（点击抚摸：不消耗积分）</span>
       </div>
       <div class="pet-actions">
-        <button id="feedPetBtn" onclick="feedPet()">喂食 (消耗10积分)</button>
+        <button id="feedPetBtn" onclick="feedPet()">喂食（不消耗积分）</button>
         <button class="btn-muted" onclick="petTip()">云宝今日建议</button>
       </div>
       <div id="pet-speech-bubble" class="pet-speech-bubble"></div>
@@ -220,7 +222,7 @@
           <div class="stat-item"><span id="pointsDisplay" class="stat-value">0</span><span class="stat-label">本期可用积分</span></div>
           <div class="stat-item"><span id="experienceDisplay" class="stat-value">0</span><span class="stat-label">总经验</span></div>
           <div class="stat-item"><span id="streakDisplay" class="stat-value">0</span><span class="stat-label">连续完成</span></div>
-          <div class="stat-item"><span id="levelDisplay" class="stat-value">1</span><span class="stat-label">等级</span></div>
+          <div class="stat-item"><span id="levelDisplay" class="stat-value">LV1</span><span class="stat-label">等级 <button class="btn-small btn-outline" style="padding:2px 8px;margin-left:6px" onclick="openLevelRules()">等级规则</button></span></div>
         </div>
         <progress id="xp-progress-bar" value="0" max="100" style="width:100%;margin-top:10px"></progress>
                 <button id="btn-new-period" style="width:100%; margin-top:10px;" onclick="startNewPeriod()">🚀 开启新周期</button>
@@ -398,6 +400,16 @@
     </div>
   </div>
 
+  <div id="levelRulesModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>等级规则</h2><span class="close-button" onclick="closeLevelRules()">&times;</span></div>
+      <div class="modal-body" id="levelRulesBody"></div>
+      <div class="modal-footer">
+        <button class="btn-muted" onclick="closeLevelRules()">关闭</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 // --- V1.6.0 CONFIG & DATA ---
 const STORAGE_KEY = 'fishGrowthPlan_data';
@@ -458,7 +470,7 @@ function getDefaultState(){
     taskPool: [], todayTasks: [], rewards: [], diaryByMonth: {},
     badges: [{id: 1, icon:"🔥",name:"连击达人",desc:"连续完成任务 7 天！奖励50积分！",condition:{type:"completionStreak",value:7},reward:50,isDefault:true}],
     pet:{happiness:80,lastFed:0,lastPetted:0,freePetUsedDate:null},
-    points: 100, experience: 0, streak: 0,
+    points: 0, experience: 0, streak: 0,
     lastCompletionDate: null,
     unlockedBadges: [], history: { lastPeriodPoints: 0, totalPoints: 0 },
     agreement:"我们是最好的伙伴！要一起努力，一起成长！",
@@ -515,6 +527,13 @@ function migrateOldState(loaded){
     if(typeof t.requiresConfirm !== 'boolean') t.requiresConfirm = !!t.isTemporary && s.settings.requireParentConfirmTempTasks;
     if(typeof t.confirmed !== 'boolean') t.confirmed = !t.requiresConfirm;
   });
+
+  // v1.6.0+ 规则：如果还没有任何完成/兑换记录，则本期可用积分应从 0 开始
+  const noHistory = (!Array.isArray(s.taskHistory) || s.taskHistory.length===0) && (!Array.isArray(s.rewardHistory) || s.rewardHistory.length===0);
+  const noXP = !s.experience || s.experience===0;
+  if(noHistory && noXP){
+    s.points = 0;
+  }
 
   return s;
 }
@@ -734,8 +753,14 @@ function renderStats(){
   document.getElementById('pointsDisplay').textContent=state.points;
   document.getElementById('experienceDisplay').textContent=state.experience;
   document.getElementById('streakDisplay').textContent=state.streak;
+
   const lv=getCurrentLevel(state.experience);
-  document.getElementById('levelDisplay').textContent=lv.level;
+  // lv.title like "LV1: 初始之光"
+  const titleParts = String(lv.title||'').split(':');
+  const prettyName = (titleParts[1]||'').trim() || '初始之光';
+  const lvText = `LV${lv.level} ${prettyName} (${lv.progress}/${lv.xpForNext})`;
+  document.getElementById('levelDisplay').textContent = lvText;
+
   const bar=document.getElementById('xp-progress-bar');
   bar.value=lv.progress; bar.max=lv.xpForNext;
   document.getElementById('lastPeriodPointsDisplay').textContent=state.history.lastPeriodPoints;
@@ -943,10 +968,8 @@ function toggleTask(todayIndex){
 
 
 function feedPet(){
-  if(state.points<10){showPetSpeech('积分不足，喂不起啦 T_T'); toast('积分不足','先完成任务攒积分吧','warn'); return}
   const now=Date.now();
   if(now-state.pet.lastFed<600*1000){showPetSpeech('刚吃过，肚子还饱着呢！(10分钟冷却)'); toast('冷却中','喂食 10 分钟冷却','warn'); return}
-  state.points -= 10;
   state.pet.happiness = Math.min(100, state.pet.happiness + 20);
   state.pet.lastFed=now;
   playPetSound('feed');
@@ -954,32 +977,19 @@ function feedPet(){
   addDiaryEntry('喂了云宝，它看起来很开心！');
   saveData();
   renderAll();
-  toast('喂食成功','云宝更开心了','success');
+  toast('喂食成功','不消耗积分','success');
 }
 
 function petPet(){
-  const todayStr=getTodayStr();
   const now=Date.now();
-  if(state.pet.freePetUsedDate!==todayStr){
-    state.pet.freePetUsedDate=todayStr;
-    state.pet.happiness=Math.min(100,state.pet.happiness+10);
-    playPetSound('pet');
-    showPetSpeech('今日第一次抚摸免费哦！❤');
-    saveData();
-    renderAll();
-    toast('抚摸云宝','今日第一次免费','success');
-    return;
-  }
-  if(state.points<5){showPetSpeech('积分不够，摸不了了 >_<'); toast('积分不足','抚摸需要 5 积分','warn'); return}
   if(now-state.pet.lastPetted<60*1000){showPetSpeech('好舒服，但让我先歇会儿~ (1分钟冷却)'); toast('冷却中','抚摸 1 分钟冷却','warn'); return}
-  state.points -= 5;
   state.pet.happiness=Math.min(100,state.pet.happiness+10);
   state.pet.lastPetted=now;
   playPetSound('pet');
   showPetSpeech('最喜欢被你抚摸了！❤');
   saveData();
   renderAll();
-  toast('抚摸成功','-5 积分','success');
+  toast('抚摸成功','不消耗积分','success');
 }
 
 function addDiaryEntry(text=null,fromInput=false){
@@ -1207,14 +1217,14 @@ function startNewPeriod(){
   if(input!=='确认'){toast('已取消','未执行结算','warn');return}
   state.history.lastPeriodPoints=state.points;
   state.history.totalPoints+=state.points;
-  state.points=100;
+  state.points=0;
   state.streak=0;
   const completedThisPeriod=state.todayTasks.filter(t=>t.completed).length;
   addDiaryEntry(`上一个周期结算：结余 ${state.history.lastPeriodPoints} 积分，完成任务 ${completedThisPeriod} 个。新周期加油！`);
   state.todayTasks=[];
   saveData();
   renderAll();
-  toast('新周期已开启','已发放 100 启动积分','success');
+  toast('新周期已开启','本期积分已清零，从任务获取积分','success');
 }
 
 function getCategoryColor(category){if(category==='learning')return '#42a5f5';if(category==='behavior')return '#ffa726';return '#66bb6a'}
@@ -1449,7 +1459,35 @@ function downloadWeeklyReport(){
   toast('周报已导出','下载的是HTML，可直接打印成PDF','success');
 }
 
+function openLevelRules(){
+  const modal = document.getElementById('levelRulesModal');
+  const body = document.getElementById('levelRulesBody');
+  const rows = LEVELS.map((l, idx)=>{
+    const lvNum = idx+1;
+    const name = String(l.title||'').split(':')[1]?.trim() || l.title;
+    const next = LEVELS[idx+1];
+    const range = next ? `${l.xp} ~ ${next.xp-1}` : `${l.xp} 以上`;
+    return ` <tr><td>LV${lvNum}</td><td>${escapeHtml(name)}</td><td>${l.xp}</td><td>${range}</td></tr>`;
+  }).join('').replace(/\u0000/g,'');
+
+  body.innerHTML = `
+    <div class="empty" style="padding:12px">
+      <div><strong>升级标准</strong></div>
+      <div style="margin-top:6px;font-size:.92em;color:#546e7a">总经验达到对应阈值即可升级。经验主要来自<strong>完成任务获得的积分</strong>（积分=经验）。</div>
+    </div>
+    <table>
+      <thead><tr><th>等级</th><th>称号</th><th>升级阈值(总经验≥)</th><th>经验区间</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="inline-hint" style="margin-top:10px">你现在的总经验：<strong>${state.experience}</strong>，当前等级：<strong>${getCurrentLevel(state.experience).title}</strong></div>
+  `;
+
+  modal.style.display = 'block';
+}
+function closeLevelRules(){document.getElementById('levelRulesModal').style.display='none';}
+
 function exportBackup(){
+
 
   try{
     const data = { version: '1.6.0', exportedAt: nowISO(), data: state };
@@ -1541,6 +1579,7 @@ window.onclick = function(event){
   if(event.target===document.getElementById('emojiPickerModal')) closeEmojiPicker();
   if(event.target===document.getElementById('rewardConfirmModal')) closeRewardConfirmModal();
   if(event.target===document.getElementById('growthModal')) closeGrowthJourney();
+  if(event.target===document.getElementById('levelRulesModal')) closeLevelRules();
 }
 
 function initialize(){
